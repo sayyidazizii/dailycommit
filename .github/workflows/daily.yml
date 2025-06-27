@@ -2,7 +2,9 @@ name: Daily Commit
 
 on:
   schedule:
-    - cron: '0 0 * * *' # UTC 00:00 = WIB 07:00
+    - cron: '0 0 * * *'     # UTC 00:00 = 07:00 WIB
+    - cron: '0 4 * * *'     # UTC 04:00 = 11:00 WIB
+    - cron: '0 10 * * *'    # UTC 10:00 = 17:00 WIB
   workflow_dispatch: # bisa dijalankan manual juga
 
 jobs:
