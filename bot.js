@@ -8,33 +8,37 @@ const git = simpleGit();
 async function makeCommitAndPR() {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const branchName = `daily-update-${timestamp}`;
-
-    // File update
     const filePath = path.join(__dirname, 'daily_update.txt');
+
+    // Tambahkan log dan update file
+    console.log('Appending file:', filePath);
     fs.appendFileSync(filePath, `Update on ${new Date()}\n`);
+    console.log('File updated:\n', fs.readFileSync(filePath, 'utf-8'));
 
     try {
-        // Create new branch
         await git.checkoutLocalBranch(branchName);
 
-        // Set Git user config (needed in GitHub Actions)
+        // Konfigurasi git
         await git.addConfig('user.name', 'sayyidazizii');
         await git.addConfig('user.email', 'sayyidsyafiq234@gmail.com');
 
-        // Commit and push
+        const status = await git.status();
+        if (status.modified.length === 0 && status.created.length === 0) {
+            console.log('No changes detected, skipping commit and PR.');
+            return;
+        }
+
         await git.add('./*');
         await git.commit('Daily update');
         await git.push('origin', branchName);
-
         console.log(`Pushed to ${branchName}`);
 
-        // Create Pull Request via GitHub API
-        const repo = process.env.GITHUB_REPOSITORY; // owner/repo
+        const repo = process.env.GITHUB_REPOSITORY;
         const token = process.env.GITHUB_TOKEN;
-
         const [owner, repoName] = repo.split('/');
 
-        const pr = await axios.post(
+        // Buat Pull Request
+        const prRes = await axios.post(
             `https://api.github.com/repos/${owner}/${repoName}/pulls`,
             {
                 title: `Daily update ${new Date().toISOString()}`,
@@ -50,7 +54,19 @@ async function makeCommitAndPR() {
             }
         );
 
-        console.log('Pull request created:', pr.data.html_url);
+        console.log('Pull request created:', prRes.data.html_url);
+
+        // Hapus branch setelah PR dibuat
+        await axios.delete(
+            `https://api.github.com/repos/${owner}/${repoName}/git/refs/heads/${branchName}`,
+            {
+                headers: {
+                    Authorization: `token ${token}`,
+                    Accept: 'application/vnd.github+json',
+                },
+            }
+        );
+        console.log(`Branch ${branchName} deleted after PR.`);
     } catch (error) {
         console.error('Error during commit/PR:', error.response?.data || error.message);
     }
