@@ -2,20 +2,21 @@ name: Daily Commit
 
 on:
   schedule:
-    - cron: '0 0 * * *'
-    - cron: '0 4 * * *'
-    - cron: '0 10 * * *'
+    - cron: '0 0 * * *'     # 07:00 WIB
+    - cron: '0 4 * * *'     # 11:00 WIB
+    - cron: '0 10 * * *'    # 17:00 WIB
   workflow_dispatch:
 
 permissions:
   contents: write
-  pull-requests: write  # <--- Tambah ini
+  pull-requests: write  # <--- untuk membuat PR
 
 jobs:
   update-and-commit:
     runs-on: ubuntu-latest
+
     steps:
-    - name: Checkout
+    - name: Checkout repository
       uses: actions/checkout@v4
 
     - name: Setup Node.js
