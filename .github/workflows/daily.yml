@@ -9,7 +9,7 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write  # <--- untuk membuat PR
+  pull-requests: write
 
 jobs:
   update-and-commit:
@@ -24,8 +24,11 @@ jobs:
       with:
         node-version: '20'
 
-    - name: Install dependencies
-      run: npm install
+    - name: Install simple-git
+      run: npm install simple-git
+
+    - name: Install axios
+      run: npm install axios
 
     - name: Run bot script
       run: node bot.js
