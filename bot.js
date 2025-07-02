@@ -17,7 +17,11 @@ async function makeCommitAndPR() {
         // Create new branch
         await git.checkoutLocalBranch(branchName);
 
-        // Commit changes
+        // Set Git user config (needed in GitHub Actions)
+        await git.addConfig('user.name', 'sayyidazizii');
+        await git.addConfig('user.email', 'sayyidsyafiq234@gmail.com');
+
+        // Commit and push
         await git.add('./*');
         await git.commit('Daily update');
         await git.push('origin', branchName);
