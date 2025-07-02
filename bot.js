@@ -11,49 +11,34 @@ async function makeCommitAndPR() {
     const branchName = `daily-update-${timestamp}`;
     const filePath = path.join(__dirname, 'daily_update.txt');
 
-    try {
-        // Buat branch baru
-        await git.checkoutLocalBranch(branchName);
+    let prUrl = '';
 
-        // Set konfigurasi user Git
+    try {
+        // Set Git user config
         await git.addConfig('user.name', 'sayyidazizii');
         await git.addConfig('user.email', 'sayyidsyafiq234@gmail.com');
 
-        // Tambahkan update awal ke file
-        const initialText = `Update on ${isoTimestamp} UTC - Processing...\n`;
-        fs.appendFileSync(filePath, initialText);
-        console.log('Appended initial log:', initialText);
+        // Create new branch
+        await git.checkoutLocalBranch(branchName);
 
-        // Cek status git
-        const status = await git.status();
-        console.log('Git Status:', status);
+        // Prepare update log
+        const updateText = `Update on ${isoTimestamp} UTC - Log created\n`;
+        fs.appendFileSync(filePath, updateText);
+        console.log('Appended:', updateText);
 
-        const diff = await git.diff();
-        console.log('Git Diff:\n', diff);
-
-        // Jika tidak ada perubahan, hentikan
-        if (
-            status.not_added.length === 0 &&
-            status.created.length === 0 &&
-            status.deleted.length === 0 &&
-            status.modified.length === 0 &&
-            status.renamed.length === 0
-        ) {
-            console.log('No changes detected, skipping commit and PR.');
-            return;
-        }
-
-        // Commit dan push
+        // Stage and commit BEFORE push
         await git.add(['-A']);
-        await git.commit('Daily update');
+        await git.commit('Daily update (log written)');
+
+        // Push to origin
         await git.push('origin', branchName);
         console.log(`Pushed to ${branchName}`);
 
+        // Create PR
         const repo = process.env.GITHUB_REPOSITORY;
         const token = process.env.GITHUB_TOKEN;
         const [owner, repoName] = repo.split('/');
 
-        // Buat PR
         const prRes = await axios.post(
             `https://api.github.com/repos/${owner}/${repoName}/pulls`,
             {
@@ -70,20 +55,17 @@ async function makeCommitAndPR() {
             }
         );
 
-        const prUrl = prRes.data.html_url;
+        prUrl = prRes.data.html_url;
         console.log('Pull request created:', prUrl);
 
-        // Tulis log keberhasilan ke file
-        const successText = `Update on ${isoTimestamp} UTC - Success: PR created at ${prUrl}\n`;
+        // Tambahkan PR URL ke file lalu commit **lagi** dan push
+        const successText = `Update on ${isoTimestamp} UTC - PR created: ${prUrl}\n`;
         fs.appendFileSync(filePath, successText);
-        console.log('Appended success log:', successText);
-
-        // Commit log terakhir
         await git.add(filePath);
-        await git.commit('Log success to file');
+        await git.commit('Log PR URL');
         await git.push('origin', branchName);
 
-        // Hapus branch setelah PR dibuat
+        // Hapus branch setelah PR
         await axios.delete(
             `https://api.github.com/repos/${owner}/${repoName}/git/refs/heads/${branchName}`,
             {
@@ -94,14 +76,20 @@ async function makeCommitAndPR() {
             }
         );
         console.log(`Branch ${branchName} deleted after PR.`);
-    } catch (error) {
-        const errMsg = error.response?.data?.message || error.message;
-        console.error('Error during commit/PR:', errMsg);
+    } catch (err) {
+        const errMsg = err.response?.data?.message || err.message;
+        console.error('❌ Error:', errMsg);
 
-        // Tulis log error ke file
+        // Tuliskan log error ke file dan commit
         const errorText = `Update on ${new Date().toISOString()} UTC - ERROR: ${errMsg}\n`;
         fs.appendFileSync(filePath, errorText);
-        console.log('Appended error log:', errorText);
+        try {
+            await git.add(filePath);
+            await git.commit('Log ERROR');
+            await git.push('origin', branchName);
+        } catch (err2) {
+            console.warn('Failed to push error log:', err2.message);
+        }
     }
 }
 
