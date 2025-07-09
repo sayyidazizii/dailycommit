@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const simpleGit = require('simple-git');
 const fs = require('fs');
 const path = require('path');
@@ -24,20 +26,21 @@ function getRandomCommitMessage() {
 }
 
 // UltraMsg config
-const instanceId = 'instance131114';
-const token = '5vz4rxz27upbfz0r';
+const instanceId = process.env.INSTANCE_ID;
+const token = process.env.ULTRAMSG_TOKEN;
+const targetPhone = process.env.PHONE_TARGET;
+
 
 async function sendWhatsAppNotif(message) {
     try {
-        const url = `https://api.ultramsg.com/${instanceId}/messages/chat`;
-        const response = await axios.post(
-            `${url}?token=${token}`,
+        const response = await axios.post(`https://api.ultramsg.com/${instanceId}/messages/chat?token=${token}`,
             {
-                to: '6285602678871',
+                to: targetPhone,
                 body: message,
                 priority: 10
             }
         );
+
 
         console.log('✅ WhatsApp notification sent via UltraMsg:', response.data);
     } catch (err) {
