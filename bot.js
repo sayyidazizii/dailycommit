@@ -5,7 +5,7 @@ const axios = require('axios');
 
 const git = simpleGit();
 
-// Daftar pesan commit acak
+// Commit message randomizer
 const messages = [
     "📦 Update harian data",
     "📝 Auto-commit: just in time",
@@ -19,20 +19,23 @@ const messages = [
     "🧠 Smart update done"
 ];
 
-// Ambil pesan commit secara acak
 function getRandomCommitMessage() {
-    const randomIndex = Math.floor(Math.random() * messages.length);
-    return messages[randomIndex];
+    return messages[Math.floor(Math.random() * messages.length)];
 }
 
-// Kirim notifikasi WhatsApp via UltraMsg
+// UltraMsg config
+const instanceId = 'instance131114';
+const token = '5vz4rxz27upbfz0r';
+
 async function sendWhatsAppNotif(message) {
     try {
+        const url = `https://api.ultramsg.com/${instanceId}/messages/chat`;
         const response = await axios.post(
-            'https://api.ultramsg.com/instance131114/messages/chat',
+            `${url}?token=${token}`,
             {
-                to: '6285602678871', // Ganti dengan nomor tujuan
-                body: message
+                to: '6285602678871',
+                body: message,
+                priority: 10
             }
         );
 
@@ -42,24 +45,24 @@ async function sendWhatsAppNotif(message) {
     }
 }
 
-// Proses commit dan push Git
 async function makeCommit() {
     const filePath = path.join(__dirname, 'daily_update.txt');
-
-    // Tambahkan catatan ke file
     fs.appendFileSync(filePath, `Update on ${new Date().toLocaleString()}\n`);
-
     const commitMessage = getRandomCommitMessage();
 
     try {
         const remote = await git.remote(['-v']);
         console.log('📡 Repository URL:\n' + remote);
 
+        // Setup Git identity
+        await git.addConfig('user.name', 'Sayyid Aziz');
+        await git.addConfig('user.email', 'sayyid@example.com');
+
+        // Commit process
         await git.add('./*');
         await git.commit(commitMessage);
         await git.push('origin', 'main');
 
-        // Kirim notifikasi sukses
         await sendWhatsAppNotif(`✅ Git update berhasil!\nPesan commit: *${commitMessage}*`);
     } catch (error) {
         console.error('❌ Failed to commit and push changes:', error);
@@ -67,5 +70,5 @@ async function makeCommit() {
     }
 }
 
-// Jalankan script
+// Jalankan bot
 makeCommit();
