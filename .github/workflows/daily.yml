@@ -33,7 +33,10 @@ jobs:
         git add .
         git commit -m "Daily update" || echo "No changes to commit"
 
-    - name: Push changes
+    - name: Pull sebelum push
+      run: git pull origin main
+
+    - name: Push ke branch main
       uses: ad-m/github-push-action@v0.8.0
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
