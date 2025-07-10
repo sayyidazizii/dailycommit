@@ -139,10 +139,16 @@ async function deleteBranch(branchName) {
         console.log('🗑️ Branch berhasil dihapus:', branchName);
         await sendWhatsAppNotif(`🗑️ Branch *${branchName}* berhasil dihapus setelah merge.`);
     } catch (err) {
-        console.error('❌ Gagal hapus branch:', err.response?.data || err.message);
-        await sendWhatsAppNotif(`❌ Gagal hapus branch: ${branchName}`);
+        if (err.response?.status === 422 && err.response?.data?.message === 'Reference does not exist') {
+            console.warn(`⚠️ Branch '${branchName}' sudah tidak ada. Mungkin sudah dihapus otomatis.`);
+            await sendWhatsAppNotif(`⚠️ Branch *${branchName}* sudah dihapus (oleh GitHub atau sebelumnya).`);
+        } else {
+            console.error('❌ Gagal hapus branch:', err.response?.data || err.message);
+            await sendWhatsAppNotif(`❌ Gagal hapus branch: ${branchName}`);
+        }
     }
 }
+
 
 async function makeCommit() {
     const filePath = path.join(__dirname, 'daily_update.txt');
