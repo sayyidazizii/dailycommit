@@ -1,4 +1,7 @@
-require('dotenv').config();
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config(); // hanya load .env di lokal
+}
+
 const simpleGit = require('simple-git');
 const fs = require('fs');
 const path = require('path');
@@ -6,35 +9,52 @@ const axios = require('axios');
 
 const git = simpleGit();
 
-// === AMBIL DARI ENV ===
+// === ENV CONFIG ===
 const instanceId = process.env.ULTRA_MSG_INSTANCE_ID;
 const ultraMsgToken = process.env.ULTRA_MSG_TOKEN;
 const whatsappNumber = process.env.WHATSAPP_NUMBER;
 
-const githubToken = process.env.GITHUB_TOKEN;
-const githubOwner = process.env.GITHUB_OWNER;
-const githubRepo = process.env.GITHUB_REPO;
-const baseBranch = process.env.GITHUB_BASE_BRANCH || 'main';
+const githubToken = process.env._TOKEN;
+const githubOwner = process.env._OWNER;
+const githubRepo = process.env._REPO;
+const baseBranch = process.env._BASE_BRANCH || 'main';
 
 // === VALIDASI ENV ===
-if (!instanceId || !ultraMsgToken || !whatsappNumber || !githubToken || !githubOwner || !githubRepo) {
-    console.error('❌ ERROR: Beberapa variabel .env tidak terisi!');
+const requiredEnv = {
+    _TOKEN: githubToken,
+    _OWNER: githubOwner,
+    _REPO: githubRepo,
+    _BASE_BRANCH: baseBranch,
+    ULTRA_MSG_INSTANCE_ID: instanceId,
+    ULTRA_MSG_TOKEN: ultraMsgToken,
+    WHATSAPP_NUMBER: whatsappNumber,
+};
+
+
+const missing = Object.entries(requiredEnv).filter(([_, val]) => !val);
+if (missing.length > 0) {
+    console.error('❌ ENV tidak lengkap! Harap isi variabel berikut:');
+    missing.forEach(([key]) => console.error(`- ${key}`));
     process.exit(1);
 }
 
-const commitMessages = [
-    "📦 Update harian data", "📝 Auto-commit: just in time", "✨ Progress pushed!",
-    "🔄 Syncing with the repo", "📅 Daily bot commit", "✅ Done and committed!",
-    "🚀 Let’s go update!", "📂 File updated automatically", "📌 Auto record update", "🧠 Smart update done"
-];
-
+// === HELPER ===
 function getRandomCommitMessage() {
-    return commitMessages[Math.floor(Math.random() * commitMessages.length)];
+    const messages = [
+        "📦 Update harian data", "📝 Auto-commit: just in time", "✨ Progress pushed!",
+        "🔄 Syncing with the repo", "📅 Daily bot commit", "✅ Done and committed!",
+        "🚀 Let’s go update!", "📂 File updated automatically", "📌 Auto record update", "🧠 Smart update done"
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
 }
 
 function getBranchName() {
     const now = new Date();
-    return `auto-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
+    return `auto-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function sendWhatsAppNotif(message) {
@@ -73,11 +93,13 @@ async function createPullRequest(branchName, commitMessage) {
         console.log('✅ PR created:', prUrl);
         await sendWhatsAppNotif(`✅ Pull Request dibuat:\n${prUrl}`);
 
+        await sleep(1000);
         await mergePullRequest(prNumber);
+        await sleep(1000);
         await deleteBranch(branchName);
 
     } catch (err) {
-        console.error('❌ PR Error:', err.response?.data || err.message);
+        console.error('❌ Gagal buat PR:', err.response?.data || err.message);
         await sendWhatsAppNotif(`❌ Gagal membuat PR:\n${err.message}`);
     }
 }
@@ -129,6 +151,7 @@ async function makeCommit() {
 
     try {
         fs.appendFileSync(filePath, `Update on ${new Date().toLocaleString()}\n`);
+        console.log('📝 File updated:', filePath);
 
         await git.addConfig('user.name', 'Sayyid Aziz');
         await git.addConfig('user.email', 'sayyid@example.com');
@@ -142,12 +165,11 @@ async function makeCommit() {
         await git.push('origin', branchName);
 
         await createPullRequest(branchName, commitMessage);
-
     } catch (err) {
         console.error('❌ Commit Gagal:', err);
         await sendWhatsAppNotif(`❌ Commit gagal:\n${err.message}`);
     }
 }
 
-// Jalankan bot
+// 🚀 Jalankan
 makeCommit();
