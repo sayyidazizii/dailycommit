@@ -66,8 +66,11 @@ async function createPullRequest(branchName, commitMessage) {
         console.log('✅ PR created:', prUrl);
         await sendWhatsAppNotif(`✅ Pull Request dibuat:\n${prUrl}`);
 
-        // Cek dan hapus branch jika PR sudah merge
-        await waitForMergeAndDelete(prNumber, branchName);
+        // Merge otomatis
+        await mergePullRequest(prNumber);
+
+        // Hapus branch setelah merge
+        await deleteBranch(branchName);
 
     } catch (err) {
         console.error('❌ PR Error:', err.response?.data || err.message);
@@ -75,39 +78,24 @@ async function createPullRequest(branchName, commitMessage) {
     }
 }
 
-async function waitForMergeAndDelete(prNumber, branchName) {
-    const url = `https://api.github.com/repos/${githubOwner}/${githubRepo}/pulls/${prNumber}`;
+async function mergePullRequest(prNumber) {
+    const url = `https://api.github.com/repos/${githubOwner}/${githubRepo}/pulls/${prNumber}/merge`;
 
-    console.log('⏳ Menunggu PR di-merge...');
-    let retries = 10;
-    let merged = false;
-
-    while (retries-- > 0) {
-        try {
-            const response = await axios.get(url, {
-                headers: {
-                    Authorization: `token ${githubToken}`,
-                    Accept: 'application/vnd.github+json'
-                }
-            });
-
-            if (response.data.merged) {
-                merged = true;
-                break;
+    try {
+        await axios.put(url, {
+            commit_title: `Auto merge PR #${prNumber}`
+        }, {
+            headers: {
+                Authorization: `token ${githubToken}`,
+                Accept: 'application/vnd.github+json'
             }
-        } catch (err) {
-            console.error('❌ Error cek PR merge:', err.message);
-        }
+        });
 
-        await new Promise(resolve => setTimeout(resolve, 10000)); // tunggu 10 detik
-    }
-
-    if (merged) {
-        console.log('✅ PR sudah di-merge! Menghapus branch...');
-        await deleteBranch(branchName);
-    } else {
-        console.log('⚠️ PR belum di-merge setelah 100 detik. Tidak menghapus branch.');
-        await sendWhatsAppNotif(`⚠️ PR belum di-merge: ${branchName}`);
+        console.log(`✅ PR #${prNumber} merged!`);
+        await sendWhatsAppNotif(`✅ PR #${prNumber} berhasil di-*merge* otomatis.`);
+    } catch (err) {
+        console.error('❌ Gagal merge PR:', err.response?.data || err.message);
+        await sendWhatsAppNotif(`❌ Gagal merge PR #${prNumber}: ${err.message}`);
     }
 }
 
@@ -123,7 +111,7 @@ async function deleteBranch(branchName) {
         });
 
         console.log('🗑️ Branch berhasil dihapus:', branchName);
-        await sendWhatsAppNotif(`🗑️ Branch *${branchName}* berhasil dihapus setelah merge PR.`);
+        await sendWhatsAppNotif(`🗑️ Branch *${branchName}* berhasil dihapus setelah merge.`);
     } catch (err) {
         console.error('❌ Gagal hapus branch:', err.response?.data || err.message);
         await sendWhatsAppNotif(`❌ Gagal hapus branch: ${branchName}`);
@@ -136,10 +124,14 @@ async function makeCommit() {
     const commitMessage = getRandomCommitMessage();
 
     try {
+        // Update file
         fs.appendFileSync(filePath, `Update on ${new Date().toLocaleString()}\n`);
+
+        // Git config
         await git.addConfig('user.name', 'Sayyid Aziz');
         await git.addConfig('user.email', 'sayyid@example.com');
 
+        // Checkout dan buat branch baru
         await git.checkout(baseBranch);
         await git.pull();
 
@@ -148,6 +140,7 @@ async function makeCommit() {
         await git.commit(commitMessage);
         await git.push('origin', branchName);
 
+        // Buat PR dan merge + hapus
         await createPullRequest(branchName, commitMessage);
 
     } catch (err) {
@@ -156,5 +149,5 @@ async function makeCommit() {
     }
 }
 
-// Jalankan
+// Jalankan bot
 makeCommit();
