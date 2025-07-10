@@ -15,10 +15,10 @@ jobs:
       ULTRA_MSG_INSTANCE_ID: ${{ secrets.ULTRA_MSG_INSTANCE_ID }}
       ULTRA_MSG_TOKEN: ${{ secrets.ULTRA_MSG_TOKEN }}
       WHATSAPP_NUMBER: ${{ secrets.WHATSAPP_NUMBER }}
-      _TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      _OWNER: ${{ secrets.GITHUB_OWNER }}
-      _REPO: ${{ secrets.GITHUB_REPO }}
-      _BASE_BRANCH: ${{ secrets.GITHUB_BASE_BRANCH }}
+      _TOKEN: ${{ secrets._TOKEN }}
+      _OWNER: ${{ secrets._OWNER }}
+      _REPO: ${{ secrets._REPO }}
+      _BASE_BRANCH: ${{ secrets._BASE_BRANCH }}
 
     steps:
     - name: Checkout repository
