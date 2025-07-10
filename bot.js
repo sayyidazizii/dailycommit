@@ -1,3 +1,4 @@
+require('dotenv').config();
 const simpleGit = require('simple-git');
 const fs = require('fs');
 const path = require('path');
@@ -5,15 +6,21 @@ const axios = require('axios');
 
 const git = simpleGit();
 
-// === KONFIGURASI ===
-const instanceId = 'instance131114'; // UltraMsg
-const ultraMsgToken = '5vz4rxz27upbfz0r'; // UltraMsg Token
-const whatsappNumber = '6285602678871';
+// === AMBIL DARI ENV ===
+const instanceId = process.env.ULTRA_MSG_INSTANCE_ID;
+const ultraMsgToken = process.env.ULTRA_MSG_TOKEN;
+const whatsappNumber = process.env.WHATSAPP_NUMBER;
 
-const githubToken = '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'; // Ganti dengan token GitHub-mu
-const githubOwner = 'sayyidazizii'; // Username GitHub
-const githubRepo = 'dailycommit';   // Nama repository GitHub
-const baseBranch = 'main';
+const githubToken = process.env.GITHUB_TOKEN;
+const githubOwner = process.env.GITHUB_OWNER;
+const githubRepo = process.env.GITHUB_REPO;
+const baseBranch = process.env.GITHUB_BASE_BRANCH || 'main';
+
+// === VALIDASI ENV ===
+if (!instanceId || !ultraMsgToken || !whatsappNumber || !githubToken || !githubOwner || !githubRepo) {
+    console.error('❌ ERROR: Beberapa variabel .env tidak terisi!');
+    process.exit(1);
+}
 
 const commitMessages = [
     "📦 Update harian data", "📝 Auto-commit: just in time", "✨ Progress pushed!",
@@ -66,10 +73,7 @@ async function createPullRequest(branchName, commitMessage) {
         console.log('✅ PR created:', prUrl);
         await sendWhatsAppNotif(`✅ Pull Request dibuat:\n${prUrl}`);
 
-        // Merge otomatis
         await mergePullRequest(prNumber);
-
-        // Hapus branch setelah merge
         await deleteBranch(branchName);
 
     } catch (err) {
@@ -124,14 +128,11 @@ async function makeCommit() {
     const commitMessage = getRandomCommitMessage();
 
     try {
-        // Update file
         fs.appendFileSync(filePath, `Update on ${new Date().toLocaleString()}\n`);
 
-        // Git config
         await git.addConfig('user.name', 'Sayyid Aziz');
         await git.addConfig('user.email', 'sayyid@example.com');
 
-        // Checkout dan buat branch baru
         await git.checkout(baseBranch);
         await git.pull();
 
@@ -140,7 +141,6 @@ async function makeCommit() {
         await git.commit(commitMessage);
         await git.push('origin', branchName);
 
-        // Buat PR dan merge + hapus
         await createPullRequest(branchName, commitMessage);
 
     } catch (err) {
