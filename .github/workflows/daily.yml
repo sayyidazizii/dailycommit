@@ -2,7 +2,7 @@ name: Daily Commit
 
 on:
   schedule:
-    - cron: '0 */2 * * *'  # Setiap 2 jam sekali (UTC)
+    - cron: '0 */4 * * *'  # Setiap 4 jam sekali (UTC)
   workflow_dispatch:
 
 jobs:
